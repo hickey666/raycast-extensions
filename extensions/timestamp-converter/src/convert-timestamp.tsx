@@ -49,23 +49,6 @@ const TIMEZONES = [
 
 type TimeUnit = "s" | "ms";
 
-// 自定义防抖 hook
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-}
-
 export default function Command() {
   const [result, setResult] = useState<string>("");
   const [timestampInput, setTimestampInput] = useState("");
@@ -74,10 +57,6 @@ export default function Command() {
   const [currentTimestamp, setCurrentTimestamp] = useState("");
   const [timeUnit, setTimeUnit] = useState<TimeUnit>("s");
   const [conversionMode, setConversionMode] = useState<"timestamp" | "date">("timestamp");
-
-  // 使用防抖优化输入
-  const debouncedTimestampInput = useDebounce(timestampInput, 300);
-  const debouncedDateInput = useDebounce(dateInput, 300);
 
   // 更新当前时间戳
   useEffect(() => {
@@ -126,24 +105,22 @@ export default function Command() {
     }
   };
 
-  // 当输入值改变时更新结果
+  // 当输入值或相关状态改变时更新结果
   useEffect(() => {
-    if (conversionMode === "timestamp" && debouncedTimestampInput) {
-      const dateStr = timestampToDate(debouncedTimestampInput, selectedTimezone);
+    if (conversionMode === "timestamp" && timestampInput) {
+      // 如果是时间戳转日期，重新转换
+      const dateStr = timestampToDate(timestampInput, selectedTimezone);
       if (dateStr) {
         setResult(dateStr);
       }
-    }
-  }, [debouncedTimestampInput, selectedTimezone, timeUnit, conversionMode]);
-
-  useEffect(() => {
-    if (conversionMode === "date" && debouncedDateInput) {
-      const timestamp = dateToTimestamp(debouncedDateInput, selectedTimezone);
+    } else if (conversionMode === "date" && dateInput) {
+      // 如果是日期转时间戳，重新转换
+      const timestamp = dateToTimestamp(dateInput, selectedTimezone);
       if (timestamp) {
         setResult(timestamp);
       }
     }
-  }, [debouncedDateInput, selectedTimezone, timeUnit, conversionMode]);
+  }, [timeUnit, selectedTimezone, conversionMode, timestampInput, dateInput]); // 监听所有相关依赖
 
   return (
     <Form
